@@ -1,30 +1,25 @@
-import { AuthOrchestrationOperateScope, type ProjectIconOverride } from "@t3tools/contracts";
 import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { planProjectRemoval } from "@t3tools/client-runtime/state/projects";
-import {
-  isAtomCommandInterrupted,
-  mapAtomCommandResult,
-  settlePromise,
-  squashAtomCommandFailure,
-  type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
-import { AsyncResult } from "effect/reactivity";
-import * as Cause from "effect/Cause";
+import { mapAtomCommandResult, settlePromise } from "@t3tools/client-runtime/state/runtime";
 
 import { useComposerDraftStore } from "../../composerDraftStore";
+import {
+  checkProjectAccess,
+  reportProjectFailure,
+  useProjectGroupUpdate,
+  type ProjectGroupUpdate,
+} from "../../hooks/useProjectGroupUpdate";
 import { releaseProjectDraftUploads } from "../../lib/composerDraftUploads";
 import { readLocalApi } from "../../localApi";
 import {
   type SidebarProjectGroupMember,
   type SidebarProjectSnapshot,
 } from "../../sidebarProjectGrouping";
-import { useEnvironments } from "../../state/environments";
 import { readThreadShells, waitForProjectRemoval } from "../../state/entities";
 import { readUnloadedThreadCount } from "../../state/olderSettledShelf";
 import { projectEnvironment } from "../../state/projects";
-import { readEnvironmentScope } from "../../state/session";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
-import { stackedThreadToast, toastManager } from "../ui/toast";
+import { toastManager } from "../ui/toast";
 import { projectGroupTitleNeedsUpdate } from "./ProjectSettingsPanel.logic";
 
 type ProjectGroup = Pick<SidebarProjectSnapshot, "displayName" | "memberProjects">;
@@ -34,97 +29,16 @@ type ProjectGroup = Pick<SidebarProjectSnapshot, "displayName" | "memberProjects
  * project menu. Failures surface as toasts; removal asks for confirmation.
  */
 export function useProjectGroupCommands() {
-  const { environments } = useEnvironments();
-  const environmentById = new Map(
-    environments.map((environment) => [environment.environmentId, environment]),
-  );
-  const updateProject = useOrchestrationCommand(projectEnvironment.update, {
-    reportFailure: false,
-  });
+  const { updateProjectGroup, canOrganizeProjectGroup } = useProjectGroupUpdate();
   const deleteProject = useOrchestrationCommand(projectEnvironment.delete, {
     reportFailure: false,
   });
 
-  const reportFailure = (title: string, result: AtomCommandResult<void, unknown>) => {
-    if (result._tag !== "Failure" || isAtomCommandInterrupted(result)) return;
-    const error = squashAtomCommandFailure(result);
-    toastManager.add(
-      stackedThreadToast({
-        type: "error",
-        title,
-        description: error instanceof Error ? error.message : "An error occurred.",
-      }),
-    );
-  };
-
-  const checkProjectAccess = (
-    members: ReadonlyArray<SidebarProjectGroupMember>,
-    failureTitle: string,
-  ) => {
-    const denied = members.find(
-      (member) => !readEnvironmentScope(member.environmentId, AuthOrchestrationOperateScope),
-    );
-    if (!denied) return null;
-    const result = AsyncResult.failure<void, Error>(
-      Cause.fail(
-        new Error(
-          `This connection cannot change projects in ${denied.environmentLabel ?? "this environment"}.`,
-        ),
-      ),
-    );
-    reportFailure(failureTitle, result);
-    return result;
-  };
-
-  // Group-shared fields live on each physical project record, so a
-  // group-level edit fans out to every member.
-  const updateAllMembers = async (
+  const updateAllMembers = (
     group: ProjectGroup,
-    input: Partial<{
-      title: string;
-      faviconPath: string | null;
-      projectIcon: ProjectIconOverride | null;
-    }>,
+    input: ProjectGroupUpdate | ((member: SidebarProjectGroupMember) => ProjectGroupUpdate),
     failureTitle: string,
-  ): Promise<AtomCommandResult<void, unknown>> => {
-    const denied = checkProjectAccess(group.memberProjects, failureTitle);
-    if (denied) return denied;
-    const unavailable = group.memberProjects.find((member) => {
-      const environment = environmentById.get(member.environmentId);
-      return environment?.connection.phase !== "connected" || !environment.serverConfig;
-    });
-    if (unavailable) {
-      const error = new Error(
-        `Connect ${unavailable.environmentLabel ?? "the selected environment"} and try again.`,
-      );
-      const result: AtomCommandResult<void, unknown> = AsyncResult.failure(Cause.fail(error));
-      reportFailure(failureTitle, result);
-      return result;
-    }
-    for (const member of group.memberProjects) {
-      const revoked = checkProjectAccess([member], failureTitle);
-      if (revoked) return revoked;
-      const result = mapAtomCommandResult(
-        await updateProject({
-          environmentId: member.environmentId,
-          input: { projectId: member.id, ...input },
-        }),
-        () => undefined,
-      );
-      if (result._tag === "Failure") {
-        // A partial fan-out is possible: earlier members already took the
-        // write. Name the environment so the user knows where it stopped.
-        reportFailure(
-          group.memberProjects.length > 1
-            ? `${failureTitle} on ${member.environmentLabel ?? "the current environment"}`
-            : failureTitle,
-          result,
-        );
-        return result;
-      }
-    }
-    return AsyncResult.success(undefined);
-  };
+  ) => updateProjectGroup(group.memberProjects, input, failureTitle);
 
   const renameGroup = async (group: ProjectGroup, nextTitle: string, wasEdited: boolean) => {
     const title = nextTitle.trim();
@@ -190,7 +104,7 @@ export function useProjectGroupCommands() {
         () => undefined,
       );
       if (result._tag === "Failure") {
-        reportFailure(`Failed to remove "${member.title}"`, result);
+        reportProjectFailure(`Failed to remove "${member.title}"`, result);
         return false;
       }
       const projectRef = scopeProjectRef(member.environmentId, member.id);
@@ -208,5 +122,5 @@ export function useProjectGroupCommands() {
     return true;
   };
 
-  return { updateAllMembers, renameGroup, removeMembers };
+  return { updateAllMembers, renameGroup, removeMembers, canOrganizeProjectGroup };
 }
