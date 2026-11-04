@@ -1,4 +1,10 @@
-import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CalendarClockIcon,
+  ChartNoAxesColumnIcon,
+  SettingsIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
@@ -34,6 +40,7 @@ import {
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { readPullRequestListPreferences } from "../pullRequest/pullRequestListPreferences";
 import { isSidebarUtilityPage, useNavigateToMainApp } from "./mainAppLocation";
+import { SidebarScheduledTasksPreview } from "./SidebarScheduledTasksPreview";
 import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
 import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
@@ -197,10 +204,12 @@ function SidebarUtilityItem({
   icon,
   label,
   onClick,
+  tooltip = label,
 }: {
   icon: ReactNode;
   label: string;
   onClick: () => void;
+  tooltip?: ReactNode;
 }) {
   return (
     <SidebarMenuItem className="shrink-0">
@@ -212,7 +221,7 @@ function SidebarUtilityItem({
             </SidebarMenuButton>
           }
         />
-        <TooltipPopup side="top">{label}</TooltipPopup>
+        <TooltipPopup side="top">{tooltip}</TooltipPopup>
       </Tooltip>
     </SidebarMenuItem>
   );
@@ -241,6 +250,11 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
   const handleSettingsClick = () => {
     closeMobileSidebar();
     void navigate({ to: "/settings" });
+  };
+
+  const handleScheduledTasksClick = () => {
+    closeMobileSidebar();
+    void navigate({ to: "/settings/scheduled-tasks" });
   };
 
   const handleUsageClick = () => {
@@ -282,6 +296,12 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
             icon={<ChartNoAxesColumnIcon />}
             label="Usage"
             onClick={handleUsageClick}
+          />
+          <SidebarUtilityItem
+            icon={<CalendarClockIcon />}
+            label="Scheduled tasks"
+            onClick={handleScheduledTasksClick}
+            tooltip={<SidebarScheduledTasksPreview />}
           />
         </>
       )}

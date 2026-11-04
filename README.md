@@ -14,12 +14,14 @@ Sync with upstream using [`fork/sync-fork.sh`](./fork/sync-fork.sh); see [`fork/
 
 <!-- fork:end -->
 
-OM Code is a GUI for the coding agents on your machine, with web, desktop, and mobile clients. It works with your existing subscriptions on Claude Code, Codex, Cursor, Grok Build, OpenCode, and Google Antigravity.
+OM Code is a GUI for the coding agents on your machine, with web, desktop, and mobile clients. It works with your existing subscriptions on Claude Code, Codex, Cursor, Grok Build, OpenCode, Google Antigravity, Kiro, and fx.
 
 ## What's different from T3 Code
 
 - **OM Code branding** — name, app icons, favicon, loading splash, and a compact, flat look on web, desktop, and mobile.
 - **Project-grouped sidebar** — threads are grouped and nested under their projects, idle projects fold away, project headers show task counts per state, and each header has a new-thread button.
+- **Project actions menu** — hover a sidebar project header and click **…** (or right-click it) to rename the project, copy its path, open its settings, or remove it.
+- **Scheduled tasks shortcut** — a calendar icon next to Usage at the bottom of the sidebar opens **Settings → Scheduled tasks**; hover it to see each task's schedule and next run.
 - **Token usage and cost** — per-thread token usage and estimated cost.
 
 Everything else follows upstream.
@@ -34,6 +36,8 @@ Install and authenticate at least one provider first:
 - Grok Build: [Grok Build CLI](https://x.ai/cli), then `grok login`
 - OpenCode: [OpenCode](https://opencode.ai), then `opencode auth login`
 - Antigravity: enable it in Settings, then use **Install Antigravity** and **Sign in with Google**
+- Kiro: [Kiro CLI](https://kiro.dev/docs/cli/), then `kiro-cli login` ([setup guide](./docs/user/providers-kiro.md))
+- fx: [fx](https://fx.sh), then `fx login` ([setup guide](./docs/user/providers-fx.md))
 
 The repo uses [Vite+](https://viteplus.dev/guide/), so install the global `vp` command (`curl -fsSL https://vite.plus | bash`), then:
 
