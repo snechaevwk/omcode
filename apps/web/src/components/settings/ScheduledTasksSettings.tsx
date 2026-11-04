@@ -341,6 +341,18 @@ export function ScheduledRelativeLabel(props: { value: string | null }) {
   return relativeLabel(props.value, Date.parse(`${nowMinute}:00.000Z`));
 }
 
+export function ScheduledTaskRunState({ task }: { readonly task: ScheduledTask }) {
+  if (task.blockedByPolicy !== undefined) return task.blockedByPolicy;
+  if (!task.enabled) return "Paused";
+  if (task.schedule.type === "webhook") return "Listening";
+  if (!task.nextRunAt) return "Not scheduled";
+  return (
+    <>
+      Next run <ScheduledRelativeLabel value={task.nextRunAt} />
+    </>
+  );
+}
+
 function deliveryOutcomeVariant(outcome: string) {
   if (outcome === "accepted") return "success";
   if (
@@ -497,8 +509,9 @@ const scheduledTaskCreatePermissionsAtom = environmentAtomList(
   serverEnvironment.upsertScheduledTask.permissionAtom,
 );
 
-const scheduledTasksListAtom = environmentAtomList("web-scheduled-tasks-list", (environmentId) =>
-  serverEnvironment.scheduledTasksLive({ environmentId, input: {} }),
+export const scheduledTasksListAtom = environmentAtomList(
+  "web-scheduled-tasks-list",
+  (environmentId) => serverEnvironment.scheduledTasksLive({ environmentId, input: {} }),
 );
 
 function ScheduledTaskEnvironmentList({
@@ -767,20 +780,7 @@ function ScheduledTaskRow({
       status={
         <div className="flex flex-wrap items-center gap-2">
           <span>
-            {scheduleLabel(task.schedule)} ·{" "}
-            {task.blockedByPolicy !== undefined ? (
-              task.blockedByPolicy
-            ) : !task.enabled ? (
-              "Paused"
-            ) : isWebhook ? (
-              "Listening"
-            ) : task.nextRunAt ? (
-              <>
-                Next run <ScheduledRelativeLabel value={task.nextRunAt} />
-              </>
-            ) : (
-              "Not scheduled"
-            )}
+            {scheduleLabel(task.schedule)} · <ScheduledTaskRunState task={task} />
           </span>
           {task.lastRunStatus !== "never" ? (
             <Badge variant={statusVariant(task.lastRunStatus)}>{task.lastRunStatus}</Badge>
