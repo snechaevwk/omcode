@@ -16,6 +16,10 @@ Sync with upstream using [`fork/sync-fork.sh`](./fork/sync-fork.sh); see [`fork/
 
 OM Code is a GUI for the coding agents on your machine, with web, desktop, and mobile clients. It works with your existing subscriptions on Claude Code, Codex, Cursor, Grok Build, OpenCode, Google Antigravity, Kiro, and fx.
 
+![OM Code thread view with the project-grouped sidebar](./fork/screenshots/thread-light.png)
+
+![OM Code in dark mode with the project actions menu open](./fork/screenshots/project-menu-dark.png)
+
 ## What's different from T3 Code
 
 - **OM Code branding** — name, app icons, favicon, loading splash, and a compact, flat look on web, desktop, and mobile.
