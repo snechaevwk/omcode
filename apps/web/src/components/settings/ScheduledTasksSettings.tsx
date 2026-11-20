@@ -1110,7 +1110,7 @@ function WebhookDeliveryMode({ environmentId }: { readonly environmentId: Enviro
   );
 }
 
-function ScheduledTaskEditorDialog({
+export function ScheduledTaskEditorDialog({
   initialEnvironmentId,
   task,
   onClose,
@@ -1874,7 +1874,7 @@ function ScheduledTaskEditorForm({
                 </div>
                 <ToggleGroup
                   multiple
-                  variant="outline"
+                  variant="primary"
                   size="sm"
                   aria-label="Days to run"
                   value={[...draft.weekdays].map(String)}

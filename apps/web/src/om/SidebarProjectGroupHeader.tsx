@@ -5,6 +5,7 @@ import {
   type OmThreadStateCounts,
 } from "@t3tools/client-runtime/om-thread-states";
 import {
+  CalendarClockIcon,
   ChevronRightIcon,
   EllipsisIcon,
   ListIcon,
@@ -22,7 +23,7 @@ import { useSidebarGroupingStore } from "./sidebarProjectGroups";
 
 // Same hues as the row status labels (amber approval, indigo input, sky
 // working, red failed); ready recedes.
-const STATE_CLASS_NAME: Record<OmThreadState, string> = {
+export const OM_THREAD_STATE_CLASS_NAME: Record<OmThreadState, string> = {
   approval: "text-warning-foreground",
   input: "text-indigo-600 dark:text-indigo-300",
   working: "text-sky-600 dark:text-sky-400",
@@ -44,12 +45,14 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
   onToggle: (groupKey: string, collapsed: boolean) => void;
   /** Starts a new thread in this project; the button shows on hover, focus, or touch. */
   onNewThread: (groupKey: string) => void;
+  /** Opens this project's routines. */
+  onOpenRoutines: (groupKey: string) => void;
   /** Opens the project menu at a viewport point, from the dots button or a right-click. */
   onOpenMenu: (groupKey: string, position: { x: number; y: number }) => void;
   /** Ends an inline rename; `title` is null when cancelled. */
   onRenameEnd: (groupKey: string, title: string | null) => void;
 }) {
-  const { groupKey, onToggle, onNewThread, onOpenMenu, onRenameEnd } = props;
+  const { groupKey, onToggle, onNewThread, onOpenRoutines, onOpenMenu, onRenameEnd } = props;
   // Hover-only actions; touch has no hover, so they stay visible there.
   const actionClassName =
     "pointer-events-none inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-icon-muted opacity-0 outline-hidden hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/project-header:pointer-events-auto group-hover/project-header:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100";
@@ -71,7 +74,7 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
               event.preventDefault();
               onOpenMenu(groupKey, { x: event.clientX, y: event.clientY });
             }}
-            className="flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-left text-xs text-sidebar-foreground outline-hidden hover:bg-sidebar-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-focus-within/project-header:pr-14 group-hover/project-header:bg-sidebar-row-hover group-hover/project-header:pr-14 pointer-coarse:pr-14"
+            className="flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-left text-xs text-sidebar-foreground outline-hidden hover:bg-sidebar-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-focus-within/project-header:pr-20 group-hover/project-header:bg-sidebar-row-hover group-hover/project-header:pr-20 pointer-coarse:pr-20"
           >
             <ChevronRightIcon
               aria-hidden
@@ -101,7 +104,9 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
                       {index > 0 ? (
                         <span className="text-sidebar-muted-foreground/60">/</span>
                       ) : null}
-                      <span className={STATE_CLASS_NAME[state]}>{props.stateCounts[state]}</span>
+                      <span className={OM_THREAD_STATE_CLASS_NAME[state]}>
+                        {props.stateCounts[state]}
+                      </span>
                     </span>
                   ),
                 )}
@@ -124,6 +129,22 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
                 <SquarePenIcon aria-hidden className="size-3.5" />
               </TooltipTrigger>
               <TooltipPopup side="top">New thread</TooltipPopup>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label={`Routines in ${props.label}`}
+                    aria-haspopup="dialog"
+                    onClick={() => onOpenRoutines(groupKey)}
+                    className={actionClassName}
+                  />
+                }
+              >
+                <CalendarClockIcon aria-hidden className="size-3.5" />
+              </TooltipTrigger>
+              <TooltipPopup side="top">Routines</TooltipPopup>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
@@ -198,6 +219,62 @@ export const SidebarProjectSettledToggle = memo(function SidebarProjectSettledTo
         <span className="min-w-0 flex-1 truncate">Settled</span>
         <span className="shrink-0 font-mono tabular-nums">{props.count}</span>
       </button>
+    </li>
+  );
+});
+
+/** Row that shows or hides the threads this project's routines started: active runs / all runs. */
+export const SidebarProjectRoutinesToggle = memo(function SidebarProjectRoutinesToggle(props: {
+  groupKey: string;
+  activeCount: number;
+  totalCount: number;
+  expanded: boolean;
+  onToggle: (groupKey: string, expanded: boolean) => void;
+  onManage: (groupKey: string) => void;
+}) {
+  const { groupKey, onToggle, onManage } = props;
+  return (
+    <li className="group/routines relative list-none">
+      <button
+        type="button"
+        aria-expanded={props.expanded}
+        onClick={() => onToggle(groupKey, !props.expanded)}
+        className="flex h-6 w-full cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-left text-2xs text-sidebar-muted-foreground outline-hidden hover:bg-sidebar-row-hover hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover/routines:pr-8 pointer-coarse:pr-8"
+      >
+        <ChevronRightIcon
+          aria-hidden
+          className={cn("size-3 shrink-0 transition-transform", props.expanded && "rotate-90")}
+        />
+        <span className="min-w-0 flex-1 truncate">Routines</span>
+        <span
+          className="shrink-0 font-mono tabular-nums"
+          aria-label={`${props.activeCount} active of ${props.totalCount} runs`}
+        >
+          {props.activeCount > 0 ? (
+            <>
+              <span className="text-sidebar-foreground">{props.activeCount}</span>
+              <span className="text-sidebar-muted-foreground/60">/</span>
+            </>
+          ) : null}
+          {props.totalCount}
+        </span>
+      </button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              aria-label="Manage routines"
+              aria-haspopup="dialog"
+              onClick={() => onManage(groupKey)}
+              className="pointer-events-none absolute top-1/2 right-0.5 inline-flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-icon-muted opacity-0 outline-hidden hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/routines:pointer-events-auto group-hover/routines:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100"
+            />
+          }
+        >
+          <CalendarClockIcon aria-hidden className="size-3" />
+        </TooltipTrigger>
+        <TooltipPopup side="top">Manage routines</TooltipPopup>
+      </Tooltip>
     </li>
   );
 });
