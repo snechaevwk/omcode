@@ -24,7 +24,8 @@ OM Code is a GUI for the coding agents on your machine, with web, desktop, and m
 
 - **OM Code branding** — name, app icons, favicon, loading splash, and a compact, flat look on web, desktop, and mobile.
 - **Project-grouped sidebar** — threads are grouped and nested under their projects, idle projects fold away, project headers show task counts per state, and each header has a new-thread button.
-- **Project actions menu** — hover a sidebar project header and click **…** (or right-click it) to rename the project, copy its path, open its settings, or remove it.
+- **Project actions menu** — hover a sidebar project header and click **…** (or right-click it) to rename the project, copy its path, open its routines or settings, or remove it.
+- **Routines** — prompts that run on a schedule, per project (including **No project**). Click the calendar icon on a project header, choose **Routines…** from its menu, or run **Project routines** from the command palette to create, edit, pause, run, or delete them. The list shows each routine's next run and how its last run went. Each run starts a new thread under **Routines** inside the project; the group opens by itself while a run is still active. Routines are scheduled tasks, so they also appear in **Settings → Scheduled tasks**. They run only while OM Code is running: a daily or weekly run is skipped if the app was closed for more than 10 minutes past its time.
 - **Scheduled tasks shortcut** — a calendar icon next to Usage at the bottom of the sidebar opens **Settings → Scheduled tasks**; hover it to see each task's schedule and next run.
 - **Token usage and cost** — per-thread token usage and estimated cost.
 
