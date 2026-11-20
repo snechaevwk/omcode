@@ -197,6 +197,8 @@ export interface EnvironmentThreadShell {
   readonly deletedAt: string | null;
   /** OM Code: token and estimated cost totals; absent on upstream servers. */
   readonly usage?: OrchestrationV2ThreadShell["usage"];
+  /** OM Code: the routine (scheduled task) that launched this thread. */
+  readonly scheduledTaskId?: OrchestrationV2ThreadShell["scheduledTaskId"];
   readonly source: OrchestrationV2ThreadShell;
 }
 
@@ -348,6 +350,7 @@ export function presentThreadShell(
           },
     deletedAt: nullableIso(thread.deletedAt),
     ...(thread.usage == null ? {} : { usage: thread.usage }),
+    ...(thread.scheduledTaskId === undefined ? {} : { scheduledTaskId: thread.scheduledTaskId }),
     source: thread,
   };
 }

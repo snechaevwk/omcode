@@ -55,6 +55,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
   BugIcon,
+  CalendarClockIcon,
   ChartNoAxesColumnIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -77,6 +78,7 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 import { openThreadFind } from "./chat/threadFindStore";
+import { openProjectRoutines } from "../om/ProjectRoutinesDialog";
 import {
   useDeferredValue,
   useEffect,
@@ -1661,6 +1663,21 @@ function OpenCommandPaletteDialog(props: {
         await navigate({
           to: "/projects/$projectKey",
           params: { projectKey: contextualProjectGroup.projectKey },
+        });
+      },
+    });
+    // OM Code: per-project routines.
+    actionItems.push({
+      kind: "action",
+      value: "action:project-routines",
+      searchTerms: ["project", "routines", "schedule", "scheduled", "tasks", "automations"],
+      title: "Project routines",
+      description: contextualProjectGroup.displayName,
+      icon: <CalendarClockIcon className={ITEM_ICON_CLASS} />,
+      run: async () => {
+        openProjectRoutines({
+          projectKey: contextualProjectGroup.projectKey,
+          title: contextualProjectGroup.displayName,
         });
       },
     });

@@ -240,8 +240,10 @@ import {
 } from "~/om/sidebarProjectGroups";
 import {
   SidebarProjectGroupHeader,
+  SidebarProjectRoutinesToggle,
   SidebarProjectSettledToggle,
 } from "~/om/SidebarProjectGroupHeader";
+import { openProjectRoutines } from "~/om/ProjectRoutinesDialog";
 import { useProjectGroupCommands } from "./settings/useProjectGroupCommands";
 
 const EMPTY_OM_COUNTS = countThreadStates([]);
@@ -1058,6 +1060,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const omSetGroupCollapsed = useSidebarGroupingStore((state) => state.setGroupCollapsed);
   const omExpandedSettledKeys = useSidebarGroupingStore((state) => state.expandedSettledGroupKeys);
   const omToggleSettledExpanded = useSidebarGroupingStore((state) => state.toggleSettledExpanded);
+  const omRoutinesExpandedKeys = useSidebarGroupingStore(
+    (state) => state.routinesExpandedGroupKeys,
+  );
+  const omSetRoutinesExpanded = useSidebarGroupingStore((state) => state.setRoutinesExpanded);
   const omProjectGroupByProjectKey = new Map(
     projectGroups.flatMap((group) =>
       group.memberProjects.map(
@@ -1318,6 +1324,13 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     if (isMobile) setOpenMobile(false);
     void handleNewThread(scopeProjectRef(group.environmentId, group.id));
   });
+  // OM Code: the project's routines, scoped the way its settings are.
+  const openRoutinesForGroup = useStableCallback((group: SidebarProjectSnapshot) => {
+    openProjectRoutines({
+      projectKey: getSidebarProjectSettingsKey(group, projectGroupingSettings, projects),
+      title: group.displayName,
+    });
+  });
   const handleProjectFolderContextMenu = useStableCallback(
     (group: SidebarProjectSnapshot, position: { x: number; y: number }) => {
       const api = readLocalApi();
@@ -1335,6 +1348,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                       : { id: "pin", label: "Pin project", icon: "pin" },
                   ]
                 : []),
+              { id: "routines", label: "Routines…", icon: "clock" },
               { id: "project-settings", label: "Project settings", icon: "settings" },
             ],
             position,
@@ -1352,6 +1366,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           case "unpin":
             setProjectGroupPinned(group, clicked.value === "pin");
             return;
+          case "routines":
+            openRoutinesForGroup(group);
+            return;
           case "project-settings":
             openProjectSettings(group);
             return;
@@ -1364,6 +1381,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const omCreateThreadInGroup = useStableCallback((groupKey: string) => {
     const group = projectGroupsRef.current.find((g) => g.projectKey === groupKey);
     if (group) startThreadInProjectFolder(group);
+  });
+  const omOpenRoutines = useStableCallback((groupKey: string) => {
+    const group = projectGroupsRef.current.find((g) => g.projectKey === groupKey);
+    if (group) openRoutinesForGroup(group);
   });
   // Project menu on a group header: rename inline, settings, copy path, remove.
   const { renameGroup: omRenameGroup, removeMembers: omRemoveGroupMembers } =
@@ -1383,6 +1404,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               ...(singleMember
                 ? [{ id: "copy-path" as const, label: "Copy path", icon: "folder" }]
                 : []),
+              { id: "routines", label: "Routines…", icon: "clock" },
               { id: "project-settings", label: "Project settings", icon: "settings" },
               {
                 id: "remove",
@@ -1406,6 +1428,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 path: singleMember.workspaceRoot,
               });
             }
+            return;
+          case "routines":
+            openRoutinesForGroup(group);
             return;
           case "project-settings":
             openProjectSettings(group);
@@ -2050,7 +2075,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         event.activatorEvent instanceof PointerEvent ? event.activatorEvent.clientY : null,
     });
   };
-  // OM Code: one section per project, settled threads tucked inside.
+  // OM Code: one section per project, settled threads and routine runs tucked inside.
   const omSections = omGroupByProject
     ? buildProjectSections({
         active: activeThreads,
@@ -2058,8 +2083,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         groupKeyOf: omGroupKeyOf,
         groupOrder: omGroupOrder,
         isCollapsed: (groupKey, hasActive) => omCollapsedGroupKeys[groupKey] ?? !hasActive,
+        isRoutine: (thread) => thread.scheduledTaskId !== undefined,
       })
     : null;
+  // Routines open on their own while a run is still active, so a fresh run shows.
+  const omRoutinesExpanded = (section: NonNullable<typeof omSections>[number]) =>
+    omRoutinesExpandedKeys[section.groupKey] ?? section.routines.active.length > 0;
   // Header counts cover every thread still in play: pinned, active and working.
   const omStateCountsByGroup = (() => {
     if (omSections === null) return null;
@@ -2154,7 +2183,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         (section) =>
           `${section.groupKey}:${section.collapsed}:${section.active.length}:${
             omExpandedSettledKeys[section.groupKey] === true ? section.settled.length : 0
-          }`,
+          }:${section.routines.active.length + section.routines.settled.length}:${omRoutinesExpanded(section)}`,
       )
       .join("\n") ?? "",
     visibleDraftSessionCount,
@@ -3476,7 +3505,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                         section: SidebarSection,
                         // The tree row of the project folder this row sits in.
                         folderRow?: string,
-                        // OM Code: settled rows in a project section sit outside the sortable list.
+                        // OM Code: settled and routine rows in a project section sit outside the sortable list.
                         staticRow = false,
                       ) => {
                         const Row = staticRow ? StaticThreadRow : SortableThreadRow;
@@ -3697,6 +3726,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                                   onToggle={omSetGroupCollapsed}
                                   renaming={omRenamingGroupKey === section.groupKey}
                                   onNewThread={omCreateThreadInGroup}
+                                  onOpenRoutines={omOpenRoutines}
                                   onOpenMenu={omOpenProjectGroupMenu}
                                   onRenameEnd={omEndProjectRename}
                                 />,
@@ -3706,6 +3736,45 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                               const children: ReactNode[] = section.active.map((thread) =>
                                 renderThreadRow(thread, "active"),
                               );
+                              const routineCount =
+                                section.routines.active.length + section.routines.settled.length;
+                              if (routineCount > 0) {
+                                const routinesExpanded = omRoutinesExpanded(section);
+                                children.push(
+                                  <SidebarProjectRoutinesToggle
+                                    key={`om-routines:${section.groupKey}`}
+                                    groupKey={section.groupKey}
+                                    activeCount={section.routines.active.length}
+                                    totalCount={routineCount}
+                                    expanded={routinesExpanded}
+                                    onToggle={omSetRoutinesExpanded}
+                                    onManage={omOpenRoutines}
+                                  />,
+                                );
+                                if (routinesExpanded) {
+                                  const routineRows: ReactNode[] = [
+                                    ...section.routines.active.map((thread) =>
+                                      renderThreadRow(thread, "active", undefined, true),
+                                    ),
+                                    ...section.routines.settled.map((thread) =>
+                                      renderThreadRow(thread, "settled", undefined, true),
+                                    ),
+                                  ];
+                                  children.push(
+                                    <li
+                                      key={`om-routines-body:${section.groupKey}`}
+                                      className="list-none"
+                                    >
+                                      <ul
+                                        role="presentation"
+                                        className="ml-3 flex flex-col gap-px border-l border-sidebar-border pl-1.5"
+                                      >
+                                        {routineRows}
+                                      </ul>
+                                    </li>,
+                                  );
+                                }
+                              }
                               const settledExpanded =
                                 omExpandedSettledKeys[section.groupKey] === true;
                               if (section.settled.length > 0) {

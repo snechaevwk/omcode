@@ -391,6 +391,8 @@ it.effect.each(
       );
       assert.equal(turnItem?.text, task.prompt);
       assert.equal(turnItem?.scheduledTaskId, task.id);
+      // A launched thread belongs to its routine; a bound thread stays the user's.
+      assert.equal(thread!.scheduledTaskId, target === "new" ? task.id : undefined);
     }).pipe(Effect.provide(Layer.mergeAll(harness.layer, layerScheduledTasks)));
   },
 );
