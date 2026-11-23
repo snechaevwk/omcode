@@ -489,8 +489,8 @@ export function SortableThreadRow(
   return <SidebarThreadRow key={rowProps.variant} {...rowProps} thread={thread} sortable={bag} />;
 }
 /**
- * OM Code: a row outside the sortable list, for settled rows nested in a
- * project section. Takes the sortable row's props so call sites can swap it in.
+ * OM Code: a row outside the sortable list, for settled and routine rows nested
+ * in a project section. Takes the sortable row's props so call sites can swap it in.
  */
 export function StaticThreadRow(
   props: Omit<SidebarThreadRowProps, "sortable"> & {

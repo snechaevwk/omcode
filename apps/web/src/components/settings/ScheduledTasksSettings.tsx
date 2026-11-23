@@ -75,6 +75,7 @@ import {
   managedCapabilityDenial,
 } from "@t3tools/contracts";
 import { resolvePastedPath } from "@t3tools/shared/path";
+import { createModelSelection } from "@t3tools/shared/model";
 import { useManagedPolicy } from "~/state/managedPolicy";
 import { ManagedNotice } from "../ManagedPolicy";
 import { readEnvironmentScope } from "~/state/session";
@@ -101,6 +102,7 @@ import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator } from "../ui/men
 import { ToggleGroup, Toggle } from "../ui/toggle-group";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from "../ui/empty";
 import { ProviderModelPicker } from "../chat/ProviderModelPicker";
+import { TraitsPicker } from "../chat/TraitsPicker";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
@@ -1110,7 +1112,7 @@ function WebhookDeliveryMode({ environmentId }: { readonly environmentId: Enviro
   );
 }
 
-function ScheduledTaskEditorDialog({
+export function ScheduledTaskEditorDialog({
   initialEnvironmentId,
   task,
   onClose,
@@ -1257,6 +1259,15 @@ function ScheduledTaskEditorForm({
   const activeInstanceId =
     activeSelection?.instanceId ?? firstInstance?.instanceId ?? ("" as ProviderInstanceId);
   const activeModel = activeSelection?.model ?? "";
+  // The stored selection keeps its options, such as effort, until the model changes.
+  const effectiveSelection =
+    activeSelection !== null &&
+    draft.baseModelSelection !== null &&
+    draft.baseModelSelection.instanceId === activeSelection.instanceId &&
+    draft.baseModelSelection.model === activeSelection.model
+      ? draft.baseModelSelection
+      : activeSelection;
+  const activeEntry = instanceEntries.find((entry) => entry.instanceId === activeInstanceId);
   const modelOptionsByInstance = getCustomModelOptionsByInstance(
     settings,
     providers,
@@ -1332,12 +1343,7 @@ function ScheduledTaskEditorForm({
       reportFailure("Checkout path is required", "Enter the path of the checkout to run in.");
       return;
     }
-    const modelSelection =
-      draft.baseModelSelection !== null &&
-      draft.baseModelSelection.instanceId === selection.instanceId &&
-      draft.baseModelSelection.model === selection.model
-        ? draft.baseModelSelection
-        : selection;
+    const modelSelection = effectiveSelection ?? selection;
     const workspaceStrategy: OrchestrationV2ThreadLaunchWorkspaceStrategy =
       draft.workspaceMode === "root"
         ? { type: "root" }
@@ -1583,7 +1589,7 @@ function ScheduledTaskEditorForm({
           </Field>
 
           <Field label="Model">
-            <div>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <ProviderModelPicker
                 environmentId={environmentId}
                 disabled={saving || !connected}
@@ -1598,6 +1604,28 @@ function ScheduledTaskEditorForm({
                   setDraft((current) => ({ ...current, modelKey: `${instanceId}:${model}` }))
                 }
               />
+              {activeEntry && effectiveSelection ? (
+                <TraitsPicker
+                  provider={activeEntry.driverKind}
+                  models={activeEntry.models}
+                  model={effectiveSelection.model}
+                  modelOptions={effectiveSelection.options ?? []}
+                  allowPromptInjectedEffort={false}
+                  planModeEnabled={settings.planModeEnabled}
+                  disabled={saving || !connected}
+                  triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
+                  onModelOptionsChange={(options) =>
+                    setDraft((current) => ({
+                      ...current,
+                      baseModelSelection: createModelSelection(
+                        effectiveSelection.instanceId,
+                        effectiveSelection.model,
+                        options,
+                      ),
+                    }))
+                  }
+                />
+              ) : null}
             </div>
           </Field>
 
@@ -1874,7 +1902,7 @@ function ScheduledTaskEditorForm({
                 </div>
                 <ToggleGroup
                   multiple
-                  variant="outline"
+                  variant="primary"
                   size="sm"
                   aria-label="Days to run"
                   value={[...draft.weekdays].map(String)}
