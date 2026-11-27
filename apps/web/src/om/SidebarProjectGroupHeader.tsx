@@ -13,6 +13,7 @@ import {
   SquarePenIcon,
 } from "lucide-react";
 import { memo, useRef } from "react";
+import { T, useGT } from "gt-react";
 
 import { ProjectFavicon, type ProjectFaviconProject } from "~/components/ProjectFavicon";
 import { SidebarHeaderIconButton } from "~/components/sidebar/SidebarThreadHeader";
@@ -52,6 +53,7 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
   /** Ends an inline rename; `title` is null when cancelled. */
   onRenameEnd: (groupKey: string, title: string | null) => void;
 }) {
+  const gt = useGT();
   const { groupKey, onToggle, onNewThread, onOpenRoutines, onOpenMenu, onRenameEnd } = props;
   // Hover-only actions; touch has no hover, so they stay visible there.
   const actionClassName =
@@ -120,7 +122,7 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
                 render={
                   <button
                     type="button"
-                    aria-label={`New thread in ${props.label}`}
+                    aria-label={gt("New thread in {project}", { project: props.label })}
                     onClick={() => onNewThread(groupKey)}
                     className={actionClassName}
                   />
@@ -128,14 +130,16 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
               >
                 <SquarePenIcon aria-hidden className="size-3.5" />
               </TooltipTrigger>
-              <TooltipPopup side="top">New thread</TooltipPopup>
+              <TooltipPopup side="top">
+                <T>New thread</T>
+              </TooltipPopup>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
                 render={
                   <button
                     type="button"
-                    aria-label={`Routines in ${props.label}`}
+                    aria-label={gt("Routines in {project}", { project: props.label })}
                     aria-haspopup="dialog"
                     onClick={() => onOpenRoutines(groupKey)}
                     className={actionClassName}
@@ -144,14 +148,16 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
               >
                 <CalendarClockIcon aria-hidden className="size-3.5" />
               </TooltipTrigger>
-              <TooltipPopup side="top">Routines</TooltipPopup>
+              <TooltipPopup side="top">
+                <T>Routines</T>
+              </TooltipPopup>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
                 render={
                   <button
                     type="button"
-                    aria-label={`Project actions for ${props.label}`}
+                    aria-label={gt("Project actions for {project}", { project: props.label })}
                     aria-haspopup="menu"
                     onClick={(event) => {
                       const rect = event.currentTarget.getBoundingClientRect();
@@ -163,7 +169,9 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
               >
                 <EllipsisIcon aria-hidden className="size-3.5" />
               </TooltipTrigger>
-              <TooltipPopup side="top">Project actions</TooltipPopup>
+              <TooltipPopup side="top">
+                <T>Project actions</T>
+              </TooltipPopup>
             </Tooltip>
           </div>
         </div>
@@ -174,6 +182,7 @@ export const SidebarProjectGroupHeader = memo(function SidebarProjectGroupHeader
 
 /** Inline project name field: Enter or blur saves, Escape cancels. */
 function ProjectRenameField(props: { label: string; onEnd: (title: string | null) => void }) {
+  const gt = useGT();
   const endedRef = useRef(false);
   const end = (title: string | null) => {
     if (endedRef.current) return;
@@ -183,7 +192,7 @@ function ProjectRenameField(props: { label: string; onEnd: (title: string | null
   return (
     <input
       autoFocus
-      aria-label="Project name"
+      aria-label={gt("Project name")}
       defaultValue={props.label}
       onFocus={(event) => event.currentTarget.select()}
       onBlur={(event) => end(event.currentTarget.value)}
@@ -216,7 +225,9 @@ export const SidebarProjectSettledToggle = memo(function SidebarProjectSettledTo
           aria-hidden
           className={cn("size-3 shrink-0 transition-transform", props.expanded && "rotate-90")}
         />
-        <span className="min-w-0 flex-1 truncate">Settled</span>
+        <span className="min-w-0 flex-1 truncate">
+          <T>Settled</T>
+        </span>
         <span className="shrink-0 font-mono tabular-nums">{props.count}</span>
       </button>
     </li>
@@ -232,6 +243,7 @@ export const SidebarProjectRoutinesToggle = memo(function SidebarProjectRoutines
   onToggle: (groupKey: string, expanded: boolean) => void;
   onManage: (groupKey: string) => void;
 }) {
+  const gt = useGT();
   const { groupKey, onToggle, onManage } = props;
   return (
     <li className="group/routines relative list-none">
@@ -245,10 +257,15 @@ export const SidebarProjectRoutinesToggle = memo(function SidebarProjectRoutines
           aria-hidden
           className={cn("size-3 shrink-0 transition-transform", props.expanded && "rotate-90")}
         />
-        <span className="min-w-0 flex-1 truncate">Routines</span>
+        <span className="min-w-0 flex-1 truncate">
+          <T>Routines</T>
+        </span>
         <span
           className="shrink-0 font-mono tabular-nums"
-          aria-label={`${props.activeCount} active of ${props.totalCount} runs`}
+          aria-label={gt("{activeCount} active of {totalCount} runs", {
+            activeCount: props.activeCount,
+            totalCount: props.totalCount,
+          })}
         >
           {props.activeCount > 0 ? (
             <>
@@ -264,7 +281,7 @@ export const SidebarProjectRoutinesToggle = memo(function SidebarProjectRoutines
           render={
             <button
               type="button"
-              aria-label="Manage routines"
+              aria-label={gt("Manage routines")}
               aria-haspopup="dialog"
               onClick={() => onManage(groupKey)}
               className="pointer-events-none absolute top-1/2 right-0.5 inline-flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-icon-muted opacity-0 outline-hidden hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/routines:pointer-events-auto group-hover/routines:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100"
@@ -273,7 +290,9 @@ export const SidebarProjectRoutinesToggle = memo(function SidebarProjectRoutines
         >
           <CalendarClockIcon aria-hidden className="size-3" />
         </TooltipTrigger>
-        <TooltipPopup side="top">Manage routines</TooltipPopup>
+        <TooltipPopup side="top">
+          <T>Manage routines</T>
+        </TooltipPopup>
       </Tooltip>
     </li>
   );
@@ -281,9 +300,10 @@ export const SidebarProjectRoutinesToggle = memo(function SidebarProjectRoutines
 
 /** Header button that turns project grouping of threads on and off. */
 export function SidebarGroupingToggle() {
+  const gt = useGT();
   const groupByProject = useSidebarGroupingStore((state) => state.groupByProject);
   const setGroupByProject = useSidebarGroupingStore((state) => state.setGroupByProject);
-  const label = groupByProject ? "Ungroup threads" : "Group threads by project";
+  const label = groupByProject ? gt("Ungroup threads") : gt("Group threads by project");
   return (
     <SidebarHeaderIconButton
       label={label}

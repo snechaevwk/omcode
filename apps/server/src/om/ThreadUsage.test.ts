@@ -100,8 +100,10 @@ it("prices each turn from uncached, cached, cache-write and output tokens", () =
         outputCostPerToken: 10,
         cacheReadCostPerToken: 0.1,
         cacheCreationCostPerToken: 2,
+        cacheCreation1hCostPerToken: 2,
         fast: null,
         ultrafast: null,
+        contextTiers: [],
       },
     ],
   ]);

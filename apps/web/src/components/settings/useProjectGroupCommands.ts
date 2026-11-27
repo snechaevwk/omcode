@@ -21,6 +21,8 @@ import { projectEnvironment } from "../../state/projects";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
 import { toastManager } from "../ui/toast";
 import { projectGroupTitleNeedsUpdate } from "./ProjectSettingsPanel.logic";
+import { useGT } from "gt-react";
+import { m } from "../../i18n/messages";
 
 type ProjectGroup = Pick<SidebarProjectSnapshot, "displayName" | "memberProjects">;
 
@@ -29,6 +31,7 @@ type ProjectGroup = Pick<SidebarProjectSnapshot, "displayName" | "memberProjects
  * project menu. Failures surface as toasts; removal asks for confirmation.
  */
 export function useProjectGroupCommands() {
+  const gt = useGT();
   const { updateProjectGroup, canOrganizeProjectGroup } = useProjectGroupUpdate();
   const deleteProject = useOrchestrationCommand(projectEnvironment.delete, {
     reportFailure: false,
@@ -43,19 +46,13 @@ export function useProjectGroupCommands() {
   const renameGroup = async (group: ProjectGroup, nextTitle: string, wasEdited: boolean) => {
     const title = nextTitle.trim();
     if (!title) {
-      toastManager.add({ type: "warning", title: "Project title cannot be empty" });
+      toastManager.add({ type: "warning", title: gt("Project title cannot be empty") });
       return;
     }
-    if (
-      !projectGroupTitleNeedsUpdate(
-        group.memberProjects.map((member) => member.title),
-        title,
-        wasEdited,
-      )
-    ) {
+    if (!projectGroupTitleNeedsUpdate(group.memberProjects, title, wasEdited)) {
       return;
     }
-    await updateAllMembers(group, { title }, "Failed to rename project");
+    await updateAllMembers(group, { title }, gt("Failed to rename project"));
   };
 
   /**
@@ -68,28 +65,31 @@ export function useProjectGroupCommands() {
     members: ReadonlyArray<SidebarProjectGroupMember>,
     hasOtherMembers: boolean,
   ): Promise<boolean> => {
-    if (checkProjectAccess(members, "Failed to remove project")) return false;
+    if (checkProjectAccess(members, gt("Failed to remove project"))) return false;
     const api = readLocalApi();
     if (!api) return false;
 
     const threads = readThreadShells();
-    const { projectThreads, confirmationMessage } = planProjectRemoval({
-      members,
-      groupMemberCount: group.memberProjects.length,
-      hasOtherMembers,
-      displayName: group.displayName,
-      threads,
-      unloadedThreadCount: readUnloadedThreadCount(members, threads),
-    });
+    const { projectThreads, confirmationMessage } = planProjectRemoval(
+      {
+        members,
+        groupMemberCount: group.memberProjects.length,
+        hasOtherMembers,
+        displayName: group.displayName,
+        threads,
+        unloadedThreadCount: readUnloadedThreadCount(members, threads),
+      },
+      m,
+    );
     const confirmed = await settlePromise(() =>
       api.dialogs.confirm(confirmationMessage, { variant: "destructive" }),
     );
     if (confirmed._tag === "Failure" || !confirmed.value) return false;
-    if (checkProjectAccess(members, "Failed to remove project")) return false;
+    if (checkProjectAccess(members, gt("Failed to remove project"))) return false;
 
     const draftStore = useComposerDraftStore.getState();
     for (const member of members) {
-      if (checkProjectAccess([member], "Failed to remove project")) return false;
+      if (checkProjectAccess([member], gt("Failed to remove project"))) return false;
       const memberThreads = projectThreads.filter(
         (thread) => thread.environmentId === member.environmentId && thread.projectId === member.id,
       );
@@ -104,7 +104,7 @@ export function useProjectGroupCommands() {
         () => undefined,
       );
       if (result._tag === "Failure") {
-        reportProjectFailure(`Failed to remove "${member.title}"`, result);
+        reportProjectFailure(gt('Failed to remove "{title}"', { title: member.title }), result);
         return false;
       }
       const projectRef = scopeProjectRef(member.environmentId, member.id);

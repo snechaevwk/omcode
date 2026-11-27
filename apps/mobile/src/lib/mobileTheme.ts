@@ -26,6 +26,7 @@ export const MOBILE_THEME_OPTIONS: ReadonlyArray<{
   readonly id: MobileThemeId;
   readonly label: string;
 }> = [
+  // oxlint-disable-next-line t3code/no-untranslated-copy -- product name
   { id: DEFAULT_MOBILE_THEME_ID, label: "OM Code" },
   { id: "material-you", label: "Material You" },
   ...BUILT_IN_THEMES.map((theme) => ({ id: theme.id as MobileThemeId, label: theme.label })),
