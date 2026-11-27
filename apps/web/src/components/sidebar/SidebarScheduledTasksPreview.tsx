@@ -4,11 +4,10 @@ import { AsyncResult } from "effect/reactivity";
 
 import { environmentIdsKey } from "../../state/environmentAtomList";
 import { useConnectedEnvironmentIds } from "../../state/environments";
-import {
-  ScheduledTaskRunState,
-  scheduledTasksListAtom,
-  scheduleLabel,
-} from "../settings/ScheduledTasksSettings";
+import { ScheduledTaskRunState, scheduledTasksListAtom } from "../settings/ScheduledTasksSettings";
+import { scheduleLabel } from "../settings/scheduledTasksSettings.logic";
+import { useClientSettings } from "../../hooks/useSettings";
+import { T, useGT, useLocale, useMessages } from "gt-react";
 
 const MAX_PREVIEW_TASKS = 8;
 
@@ -18,6 +17,10 @@ function nextRunOrder(task: ScheduledTask) {
 
 // Mounted only while the tooltip is open, so the live subscription runs only on hover.
 export function SidebarScheduledTasksPreview() {
+  const gt = useGT();
+  const messages = useMessages();
+  const locale = useLocale();
+  const timestampFormat = useClientSettings((settings) => settings.timestampFormat);
   const environmentIds = useConnectedEnvironmentIds();
   const queries = useAtomValue(scheduledTasksListAtom(environmentIdsKey(environmentIds)));
   const tasks = queries
@@ -29,14 +32,24 @@ export function SidebarScheduledTasksPreview() {
 
   return (
     <div className="w-64 py-0.5">
-      <div className="mb-1 font-medium">Scheduled tasks</div>
+      <div className="mb-1 font-medium">
+        <T>Scheduled tasks</T>
+      </div>
       {visible.length > 0 ? (
         <ul className="space-y-1.5">
           {visible.map((task) => (
             <li key={task.id} className="min-w-0">
               <div className="truncate">{task.title}</div>
               <div className="truncate text-muted-foreground">
-                {scheduleLabel(task.schedule)} · <ScheduledTaskRunState task={task} />
+                {scheduleLabel(
+                  task.schedule,
+                  timestampFormat,
+                  undefined,
+                  task.nextRunAt,
+                  messages,
+                  locale,
+                )}{" "}
+                · <ScheduledTaskRunState task={task} />
               </div>
             </li>
           ))}
@@ -44,16 +57,18 @@ export function SidebarScheduledTasksPreview() {
       ) : (
         <div className="text-muted-foreground">
           {loading
-            ? "Loading…"
+            ? gt("Loading…")
             : failed
-              ? "Could not load scheduled tasks"
+              ? gt("Could not load scheduled tasks")
               : environmentIds.length === 0
-                ? "No connected environments"
-                : "No scheduled tasks"}
+                ? gt("No connected environments")
+                : gt("No scheduled tasks")}
         </div>
       )}
       {tasks.length > visible.length ? (
-        <div className="mt-1.5 text-muted-foreground">+{tasks.length - visible.length} more</div>
+        <div className="mt-1.5 text-muted-foreground">
+          {gt("+{count} more", { count: tasks.length - visible.length })}
+        </div>
       ) : null}
     </div>
   );

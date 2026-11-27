@@ -10,7 +10,7 @@
 | `main` | Byte-for-byte mirror of [`pingdotgg/t3code`](https://github.com/pingdotgg/t3code) `main`.    |
 | `work` | Default branch. Upstream plus the OM Code changes below. Branch from here and open PRs here. |
 
-Sync with upstream using [`fork/sync-fork.sh`](./fork/sync-fork.sh); see [`fork/README.md`](./fork/README.md). Fork-only tooling lives in `fork/`, never in `scripts/`.
+Upstream syncs are reviewed in PRs into `work`, with OM Code changes preserved on top of upstream. Fork-only tooling lives in [`fork/`](./fork/README.md), never in `scripts/`.
 
 <!-- fork:end -->
 
@@ -64,7 +64,7 @@ The docs in [docs/](./docs) come from upstream and still say "T3 Code"; they app
 - [Connect outside agents over MCP](./docs/user/outside-agents.md)
 - [Source control integrations](./docs/user/source-control.md)
 - Multiple accounts: [Codex](./docs/user/providers-codex.md) · [Claude](./docs/user/providers-claude.md)
-- Architecture: [docs/internals/overview.md](./docs/internals/overview.md)
+- Architecture: [docs/internals/01_architecture.md](./docs/internals/01_architecture.md)
 
 ## License
 

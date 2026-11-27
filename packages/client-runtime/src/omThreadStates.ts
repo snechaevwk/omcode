@@ -19,9 +19,9 @@ export const OM_THREAD_STATE_ORDER: ReadonlyArray<OmThreadState> = [
  * needs that bucket's attention.
  */
 export function omThreadStateOf(
-  status: OmThreadState | "waiting" | "request" | "limited",
+  status: OmThreadState | "waiting" | "preparing" | "request" | "limited",
 ): OmThreadState {
-  if (status === "waiting") return "working";
+  if (status === "waiting" || status === "preparing") return "working";
   if (status === "request") return "input";
   if (status === "limited") return "failed";
   return status;

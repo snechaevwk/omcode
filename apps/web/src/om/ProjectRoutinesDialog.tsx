@@ -27,20 +27,25 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
+import { useClientSettings } from "~/hooks/useSettings";
+import { msg, T, useGT, useMessages, useLocale, Var } from "gt-react";
 import { create } from "zustand";
 
 import { resolveSidebarThreadStatus } from "~/components/Sidebar.logic";
 import {
   ScheduledTaskEditorDialog,
+  ScheduledRelativeLabel,
   ScheduledTaskRunState,
-  scheduleLabel,
   scheduledTasksListAtom,
 } from "~/components/settings/ScheduledTasksSettings";
 import {
   SettingsScopeProvider,
   useSettingsScope,
 } from "~/components/settings/SettingsScopeContext";
-import { matchesScheduledTaskScope } from "~/components/settings/scheduledTasksSettings.logic";
+import {
+  matchesScheduledTaskScope,
+  scheduleLabel,
+} from "~/components/settings/scheduledTasksSettings.logic";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -63,14 +68,12 @@ import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "~/compone
 import { Switch } from "~/components/ui/switch";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
 import { requestConfirmDialog } from "~/confirmDialog";
-import { useNowMinute } from "~/hooks/useNowMinute";
 import { useThreadShellsForProjectRefs } from "~/state/entities";
 import { environmentAtomList, environmentIdsKey } from "~/state/environmentAtomList";
 import { formatEnvironmentQueryError } from "~/state/query";
 import { serverEnvironment } from "~/state/server";
 import { readEnvironmentScope } from "~/state/session";
 import { useAtomCommand } from "~/state/use-atom-command";
-import { formatRelativeTimeLabel } from "~/timestampFormat";
 
 import { OM_THREAD_STATE_CLASS_NAME } from "./SidebarProjectGroupHeader";
 
@@ -117,12 +120,12 @@ const routineCreatePermissionsAtom = environmentAtomList(
 );
 
 const STATE_LABELS: Record<OmThreadState, string> = {
-  approval: "Waiting for approval",
-  input: "Waiting for input",
-  working: "Working",
-  failed: "Failed",
+  approval: msg("Waiting for approval"),
+  input: msg("Waiting for input"),
+  working: msg("Working"),
+  failed: msg("Failed"),
   // The sidebar row's word for a finished run.
-  ready: "Done",
+  ready: msg("Done"),
 };
 
 function ProjectRoutinesDialog({ title }: { readonly title: string }) {
@@ -181,10 +184,16 @@ function ProjectRoutinesDialog({ title }: { readonly title: string }) {
     >
       <DialogPopup className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Routines · {title}</DialogTitle>
+          <DialogTitle>
+            <T>
+              Routines · <Var>{title}</Var>
+            </T>
+          </DialogTitle>
           <DialogDescription>
-            Prompts that run on a schedule. Each run starts a new thread, listed under Routines in
-            this project.
+            <T>
+              Prompts that run on a schedule. Each run starts a new thread, listed under Routines in
+              this project.
+            </T>
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -192,7 +201,7 @@ function ProjectRoutinesDialog({ title }: { readonly title: string }) {
             <p className="text-sm text-muted-foreground">{scope.message}</p>
           ) : connectedIds.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Connect the environment this project runs on to manage its routines.
+              <T>Connect the environment this project runs on to manage its routines.</T>
             </p>
           ) : routines.length === 0 && !loading ? (
             <Empty>
@@ -200,9 +209,11 @@ function ProjectRoutinesDialog({ title }: { readonly title: string }) {
                 <EmptyMedia variant="icon">
                   <CalendarClockIcon />
                 </EmptyMedia>
-                <EmptyTitle>No routines yet</EmptyTitle>
+                <EmptyTitle>
+                  <T>No routines yet</T>
+                </EmptyTitle>
                 <EmptyDescription>
-                  Create one to run a prompt daily, on weekdays, every few minutes, or once.
+                  <T>Create one to run a prompt daily, on weekdays, every few minutes, or once.</T>
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -225,17 +236,21 @@ function ProjectRoutinesDialog({ title }: { readonly title: string }) {
           )}
           {loading ? (
             <p className="text-xs text-muted-foreground" role="status">
-              Loading routines…
+              <T>Loading routines…</T>
             </p>
           ) : null}
           {problems.map((problem) => (
             <p key={problem} className="text-xs text-destructive" role="status">
-              Could not load routines: {problem}
+              <T>
+                Could not load routines: <Var>{problem}</Var>
+              </T>
             </p>
           ))}
         </DialogPanel>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" size="sm" />}>Close</DialogClose>
+          <DialogClose render={<Button variant="outline" size="sm" />}>
+            <T>Close</T>
+          </DialogClose>
           <Button
             size="sm"
             disabled={creationEnvironmentId === undefined}
@@ -245,7 +260,7 @@ function ProjectRoutinesDialog({ title }: { readonly title: string }) {
             }
           >
             <PlusIcon />
-            New routine
+            <T>New routine</T>
           </Button>
         </DialogFooter>
         {/* Rendered inside the popup so it nests: closing it returns to the list. */}
@@ -262,12 +277,6 @@ function ProjectRoutinesDialog({ title }: { readonly title: string }) {
   );
 }
 
-function LastRunLabel({ value }: { readonly value: string }) {
-  // Minute tick, like ScheduledRelativeLabel; a run from this minute reads "just now".
-  const nowMinute = useNowMinute();
-  return formatRelativeTimeLabel(value, Date.parse(`${nowMinute}:00.000Z`));
-}
-
 function RoutineRow({
   environmentId,
   task,
@@ -280,6 +289,10 @@ function RoutineRow({
   readonly onEdit: () => void;
 }) {
   const navigate = useNavigate();
+  const gt = useGT();
+  const timestampFormat = useClientSettings((settings) => settings.timestampFormat);
+  const messages = useMessages();
+  const locale = useLocale();
   const canOperate = useAtomValue(
     serverEnvironment.upsertScheduledTask.permissionAtom(environmentId),
   );
@@ -295,7 +308,9 @@ function RoutineRow({
     if (busy || !readEnvironmentScope(environmentId, AuthOrchestrationOperateScope)) return;
     if (action === "delete") {
       const confirmed = await requestConfirmDialog(
-        `Delete routine "${task.title}"?\nIt stops running. Threads it already started stay.`,
+        gt('Delete routine "{title}"?\nIt stops running. Threads it already started stay.', {
+          title: task.title,
+        }),
         { variant: "destructive" },
       );
       if (confirmed !== true) return;
@@ -312,7 +327,7 @@ function RoutineRow({
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Could not update routine",
+          title: gt("Could not update routine"),
           description: String(squashAtomCommandFailure(result)),
         }),
       );
@@ -328,7 +343,15 @@ function RoutineRow({
       <div className="min-w-0 flex-1 space-y-1">
         <p className="truncate text-sm font-medium">{task.title}</p>
         <p className="text-xs text-muted-foreground">
-          {scheduleLabel(task.schedule)} · <ScheduledTaskRunState task={task} />
+          {scheduleLabel(
+            task.schedule,
+            timestampFormat,
+            undefined,
+            task.nextRunAt,
+            messages,
+            locale,
+          )}{" "}
+          · <ScheduledTaskRunState task={task} />
         </p>
         {latestRun !== null && runState !== null ? (
           <p className="text-xs text-muted-foreground">
@@ -343,22 +366,28 @@ function RoutineRow({
                 });
               }}
             >
-              {task.threadId === null ? "Last run" : "Runs in"}{" "}
+              {task.threadId === null ? gt("Last run") : gt("Runs in")}{" "}
               {task.threadId === null ? (
-                <LastRunLabel value={latestRun.createdAt} />
+                <ScheduledRelativeLabel value={latestRun.createdAt} />
               ) : (
                 latestRun.title
               )}
             </button>
             {" · "}
-            <span className={OM_THREAD_STATE_CLASS_NAME[runState]}>{STATE_LABELS[runState]}</span>
+            <span className={OM_THREAD_STATE_CLASS_NAME[runState]}>
+              {messages(STATE_LABELS[runState])}
+            </span>
           </p>
         ) : task.lastRunAt !== null ? (
           <p className="text-xs text-muted-foreground">
-            Last run <LastRunLabel value={task.lastRunAt} />
+            <T>
+              Last run <ScheduledRelativeLabel value={task.lastRunAt} />
+            </T>
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground">Not run yet</p>
+          <p className="text-xs text-muted-foreground">
+            <T>Not run yet</T>
+          </p>
         )}
         {errorText ? (
           <p className="line-clamp-3 text-xs wrap-anywhere text-destructive">{errorText}</p>
@@ -367,7 +396,11 @@ function RoutineRow({
       <Switch
         checked={task.enabled}
         disabled={busy || !canOperate}
-        aria-label={task.enabled ? `Pause ${task.title}` : `Resume ${task.title}`}
+        aria-label={
+          task.enabled
+            ? gt("Pause {title}", { title: task.title })
+            : gt("Resume {title}", { title: task.title })
+        }
         onCheckedChange={() => void act("toggle")}
       />
       <Menu>
@@ -377,7 +410,7 @@ function RoutineRow({
               size="icon-sm"
               variant="ghost"
               disabled={busy || !canOperate}
-              aria-label={`Actions for ${task.title}`}
+              aria-label={gt("Actions for {title}", { title: task.title })}
             />
           }
         >
@@ -386,19 +419,19 @@ function RoutineRow({
         <MenuPopup align="end">
           <MenuItem onClick={onEdit}>
             <PencilIcon />
-            Edit
+            <T>Edit</T>
           </MenuItem>
           {/* Webhook tasks need a request from their URL. */}
           {task.schedule.type === "webhook" ? null : (
             <MenuItem disabled={task.lastRunStatus === "running"} onClick={() => void act("run")}>
               <PlayIcon />
-              Run now
+              <T>Run now</T>
             </MenuItem>
           )}
           <MenuSeparator />
           <MenuItem onClick={() => void act("delete")}>
             <Trash2Icon />
-            Delete
+            <T>Delete</T>
           </MenuItem>
         </MenuPopup>
       </Menu>

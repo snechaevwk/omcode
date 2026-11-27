@@ -11,6 +11,7 @@ import {
   threadUsageTotalTokens,
 } from "@t3tools/client-runtime/om-thread-usage";
 import { formatCount, formatTokens } from "@t3tools/shared/usageFormat";
+import { T, useGT } from "gt-react";
 
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
@@ -39,15 +40,16 @@ export function ThreadUsageInline(props: {
 
 /** Label/value grid for tooltips. */
 export function ThreadUsageBreakdown(props: { usage: ThreadUsageSummary }) {
+  const gt = useGT();
   const { usage } = props;
   const cost = formatEstimatedCost(usage);
   const rows: Array<readonly [string, string]> = [
-    ["Input", formatCount(usage.inputTokens)],
-    ["  cached", formatCount(usage.cachedInputTokens)],
-    ["Output", formatCount(usage.outputTokens)],
-    ["  reasoning", formatCount(usage.reasoningTokens)],
-    ["Turns", formatCount(usage.turns)],
-    ["Est. cost", cost ?? "unpriced"],
+    [gt("Input"), formatCount(usage.inputTokens)],
+    [gt("  cached"), formatCount(usage.cachedInputTokens)],
+    [gt("Output"), formatCount(usage.outputTokens)],
+    [gt("  reasoning"), formatCount(usage.reasoningTokens)],
+    [gt("Turns"), formatCount(usage.turns)],
+    [gt("Est. cost"), cost ?? gt("unpriced")],
   ];
   return (
     <div className="grid gap-1 font-mono text-xs">
@@ -60,9 +62,9 @@ export function ThreadUsageBreakdown(props: { usage: ThreadUsageSummary }) {
         ))}
       </div>
       <p className="max-w-56 font-sans text-muted-foreground">
-        API-equivalent estimate from model rates. Subscription plans bill separately.
+        <T>API-equivalent estimate from model rates. Subscription plans bill separately.</T>
         {usage.unpricedTurns > 0
-          ? ` ${formatCount(usage.unpricedTurns)} turn(s) used a model without a known rate.`
+          ? ` ${gt("{count, plural, one {{count} turn used a model without a known rate.} other {{count} turns used a model without a known rate.}}", { count: usage.unpricedTurns })}`
           : ""}
       </p>
     </div>
@@ -71,6 +73,7 @@ export function ThreadUsageBreakdown(props: { usage: ThreadUsageSummary }) {
 
 /** Thread header chip with a breakdown tooltip. */
 export function ThreadUsageHeaderChip(props: { environmentId: EnvironmentId; threadId: ThreadId }) {
+  const gt = useGT();
   const threadRef = scopeThreadRef(props.environmentId, props.threadId);
   const usage = useThreadShell(threadRef)?.usage;
   if (!usage) return null;
@@ -80,7 +83,7 @@ export function ThreadUsageHeaderChip(props: { environmentId: EnvironmentId; thr
         render={
           <span
             role="status"
-            aria-label="Token usage"
+            aria-label={gt("Token usage")}
             className="hidden shrink-0 cursor-default items-center rounded-sm border border-border px-1.5 py-0.5 text-xs sm:inline-flex"
           />
         }

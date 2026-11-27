@@ -1,8 +1,9 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react";
+import { useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 
-import { mobilePreferencesAtom, updateMobilePreferencesAtom } from "../../state/preferences";
+import { mobilePreferencesAtom, saveMobilePreferences } from "../../state/preferences";
+import { useAtomCommand } from "../../state/use-atom-command";
 
 const EMPTY_KEYS: readonly string[] = [];
 
@@ -13,28 +14,34 @@ const EMPTY_KEYS: readonly string[] = [];
  */
 export function useOmProjectGroupingPreferences() {
   const preferencesResult = useAtomValue(mobilePreferencesAtom);
-  const savePreferences = useAtomSet(updateMobilePreferencesAtom);
+  const savePreferences = useAtomCommand(saveMobilePreferences);
   const loaded = AsyncResult.isSuccess(preferencesResult);
   const groupByProject = !loaded || preferencesResult.value.omThreadListGroupByProject !== false;
   const collapsedList =
     (loaded ? preferencesResult.value.collapsedProjectGroups : undefined) ?? EMPTY_KEYS;
   const collapsedKeys = useMemo(() => new Set(collapsedList), [collapsedList]);
 
-  const toggleGroupByProject = useCallback(() => {
+  const toggleGroupByProject = () => {
     if (!loaded) return;
-    savePreferences({ omThreadListGroupByProject: !groupByProject });
-  }, [groupByProject, loaded, savePreferences]);
-  const toggleGroupCollapsed = useCallback(
-    (groupKey: string) => {
-      if (!loaded) return;
-      savePreferences({
-        collapsedProjectGroups: collapsedList.includes(groupKey)
-          ? collapsedList.filter((key) => key !== groupKey)
-          : [...collapsedList, groupKey],
-      });
-    },
-    [collapsedList, loaded, savePreferences],
-  );
+    void savePreferences({
+      transform: (current) => ({
+        omThreadListGroupByProject: current.omThreadListGroupByProject === false,
+      }),
+    });
+  };
+  const toggleGroupCollapsed = (groupKey: string) => {
+    if (!loaded) return;
+    void savePreferences({
+      transform: (current) => {
+        const keys = current.collapsedProjectGroups ?? EMPTY_KEYS;
+        return {
+          collapsedProjectGroups: keys.includes(groupKey)
+            ? keys.filter((key) => key !== groupKey)
+            : [...keys, groupKey],
+        };
+      },
+    });
+  };
 
   return { groupByProject, collapsedKeys, toggleGroupByProject, toggleGroupCollapsed } as const;
 }
